@@ -334,11 +334,10 @@ void IthoCC1101::initReceive()
 	while ((readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) != CC1101_MARCSTATE_RX) yield();
 
 //	initReceiveMessage2(IthoUnknown);
-	initReceiveMessage2(ithomsg_unknown);
+	initReceiveMessage();
 }
 
-//void  IthoCC1101::initReceiveMessage2(IthoCommand expectedCommand)
-void  IthoCC1101::initReceiveMessage2(IthoMessageType expectedMessageType)
+void  IthoCC1101::initReceiveMessage()
 {
 	uint8_t marcState;
 
@@ -350,11 +349,11 @@ void  IthoCC1101::initReceiveMessage2(IthoMessageType expectedMessageType)
 	writeRegister(CC1101_DEVIATN ,0x50);
 
  	//set fifo mode with fixed packet length and sync bytes
-	writeRegister(CC1101_PKTLEN ,42);			//42 bytes message (sync at beginning of message is removed by CC1101)
-	receiveState = ExpectNormalCommand;
+	//writeRegister(CC1101_PKTLEN ,42);			//42 bytes message (sync at beginning of message is removed by CC1101)
+	//receiveState = ExpectNormalCommand;
 
 	//set fifo mode with fixed packet length and sync bytes
-	writeRegister(CC1101_PKTCTRL0 ,0x00);
+	writeRegister(CC1101_PKTCTRL0 ,0x02);
 	writeRegister(CC1101_SYNC1 ,170);			//message2 byte6
 	writeRegister(CC1101_SYNC0 ,171);			//message2 byte7
 	writeRegister(CC1101_MDMCFG2 ,0x02);
