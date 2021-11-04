@@ -211,6 +211,46 @@ uint8_t CC1101::receiveData(CC1101Packet* packet, uint8_t length)
 	return packet->length;
 }
 
+size_t CC1101::readData(CC1101Packet* packet, size_t maxLen) {
+  size_t length = maxLen;
+  uint8_t bytesInFIFO = 0;
+
+  bytesInFIFO = readRegisterWithSyncProblem(CC1101_RXBYTES, CC1101_READ_BURST) & CC1101_BITS_RX_BYTES_IN_FIFO;
+
+  size_t readBytes = 0;
+  uint32_t lastFIFORead = millis();
+
+  // keep reading from FIFO until we get all the packet.
+  while (readBytes < length) {
+    if (bytesInFIFO == 0) {
+      if (millis() - lastFIFORead > 5) {
+        break;
+      } else {
+        bytesInFIFO = readRegisterWithSyncProblem(CC1101_RXBYTES, CC1101_READ_BURST) & CC1101_BITS_RX_BYTES_IN_FIFO;
+        continue;
+      }
+    }
+
+    uint8_t bytesToRead = min((uint8_t)(length - readBytes), bytesInFIFO); // only read from bytesInFIFO if there is buffer length available
+    if (bytesToRead > 1) { //CC1101 errata: RX FIFO pointer is sometimes not properly updated and the last read byte is duplicated, leave on byte in buffer until only one byte is left
+      bytesToRead -= 1;
+    }
+    readBurstRegister(&(packet->data[readBytes]), CC1101_RXFIFO, bytesToRead);
+    readBytes += bytesToRead;
+    packet->length = readBytes;
+    lastFIFORead = millis();
+
+    // Get how many bytes are left in FIFO.
+    bytesInFIFO = readRegisterWithSyncProblem(CC1101_RXBYTES, CC1101_READ_BURST) & CC1101_BITS_RX_BYTES_IN_FIFO;
+  }
+
+  writeCommand(CC1101_SIDLE);  //idle
+  writeCommand(CC1101_SFRX); //flush RX buffer
+  writeCommand(CC1101_SRX); //switch to RX state
+
+  return readBytes;
+}
+
 //This function is able to send packets bigger then the FIFO size.
 void CC1101::sendData(CC1101Packet *packet)
 {

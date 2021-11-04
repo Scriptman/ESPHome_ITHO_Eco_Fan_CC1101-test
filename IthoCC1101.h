@@ -73,11 +73,8 @@ class IthoCC1101 : protected CC1101
 {
 	private:
 		//receive
-		IthoReceiveStates receiveState;											//state machine receive
-		unsigned long lastMessage1Received;										//used for timeout detection
-		CC1101Packet inMessage1;												//temp storage message1
-		CC1101Packet inMessage2;												//temp storage message2
-		IthoPacket inIthoPacket;												//stores last received message data
+		CC1101Packet inMessage;                       //temp storage message2
+    	IthoPacket inIthoPacket;                        //stores last received message data
 
 		//send
 		IthoPacket outIthoPacket;												//stores state of "remote"
@@ -91,7 +88,10 @@ class IthoCC1101 : protected CC1101
 		~IthoCC1101();
 
 		//init
-		void init() { CC1101::init(); }											//init,reset CC1101
+		void init() {
+			CC1101::init(); //init,reset CC1101
+			initReceive();
+		}
 		void initReceive();
 		uint8_t getLastCounter() { return outIthoPacket.counter; }				//counter is increased before sending a command
 		void setSendTries(uint8_t sendTries) { this->sendTries = sendTries; }
@@ -99,6 +99,7 @@ class IthoCC1101 : protected CC1101
 		//- deviceid should be a setting as well? random gen function? TODO
 
 		//receive
+		uint8_t receivePacket();  //read RX fifo
 		bool checkForNewPacket();												//check RX fifo for new data
 		IthoPacket getLastPacket() { return inIthoPacket; }						//retrieve last received/parsed packet from remote
 		IthoCommand getLastCommand() { return inIthoPacket.command; }						//retrieve last received/parsed command from remote
@@ -106,8 +107,8 @@ class IthoCC1101 : protected CC1101
 		uint8_t ReadRSSI();
 		bool checkID(const uint8_t *id);
 		String getLastIDstr(bool ashex=true);
-		String getLastMessage2str(bool ashex=true);
-
+		String getLastMessagestr(bool ashex=true);
+		String LastMessageDecoded();
 
 		//send
 		void sendCommand(IthoCommand command);
@@ -117,8 +118,7 @@ class IthoCC1101 : protected CC1101
 		IthoCC1101& operator=( const IthoCC1101 &c);
 
 		//init CC1101 for receiving
-		void initReceiveMessage1();
-		void initReceiveMessage2(IthoMessageType expectedMessageType);
+		void initReceiveMessage();
 
 		//init CC1101 for sending
 		void initSendMessage1();
@@ -132,11 +132,8 @@ class IthoCC1101 : protected CC1101
 		bool isValidMessageLeave();
 
 		//parse received message
-		void parseReceivedPackets();
-		void parseMessageStart();
-		void parseMessageCommand();
-		void parseMessageJoin();
-		void parseMessageLeave();
+		bool parseMessageCommand();
+		bool checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]);
 
 		//send
 		void createMessageStart(IthoPacket *itho, CC1101Packet *packet);

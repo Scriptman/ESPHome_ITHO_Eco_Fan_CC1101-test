@@ -370,66 +370,174 @@ void  IthoCC1101::initReceiveMessage2(IthoMessageType expectedMessageType)
 	}
 }
 
+uint8_t IthoCC1101::receivePacket() {
+  return readData(&inMessage, MAX_RAW);
+}
+
 bool IthoCC1101::checkForNewPacket()
 {
-	if (receiveData(&inMessage2, 42))
-	{
-		parseMessageCommand();
-		initReceiveMessage2(ithomsg_unknown);
+	if (parseMessageCommand()) {
+    initReceiveMessage();
 		return true;
 	}
 
 	return false;
 }
 
-void IthoCC1101::parseMessageCommand()
-{
-	bool isPowerCommand = true;
-	bool isHighCommand = true;
-	bool isMediumCommand = true;
-	bool isLowCommand = true;
-	bool isStandByCommand = true;
-	bool isTimer1Command = true;
-	bool isTimer2Command = true;
-	bool isTimer3Command = true;
-	bool isJoinCommand = true;
-	bool isLeaveCommand = true;
+bool IthoCC1101::parseMessageCommand() {
+  messageDecode(&inMessage, &inIthoPacket);
 
-	//device id
-	memcpy(inIthoPacket.deviceId2, &inMessage2.data[8], sizeof inIthoPacket.deviceId2);
+  uint8_t dataPos = 0;
+  inIthoPacket.error = 0;
+  inIthoPacket.command = IthoUnknown;
 
-	//counter1
-	inIthoPacket.counter = calculateMessageCounter(inMessage2.data[16], inMessage2.data[17], (inMessage2.data[16] & 0b11110000));
+  //first byte is the header of the message, this determines the structure of the rest of the message
+  //The bits are used as follows <00TTAAPP>
+  // 00 - Unused
+  // TT - Message type
+  // AA - Present DeviceID fields
+  // PP - Present Params
+  inIthoPacket.header  = inIthoPacket.dataDecoded[0];
+  dataPos++;
 
-	//match received commandBytes from inMessage2 [offset is +18] with known command bytes
-	//and for simpcity sake we ignore the first 11 bytes: the last 4 bytes are still unique
-	for (int i=11; i<15; i++)
-	{
-		if (inMessage2.data[i+18] != ithoMessage2PowerCommandBytes[i])   isPowerCommand = false;
-		if (inMessage2.data[i+18] != ithoMessage2HighCommandBytes[i])    isHighCommand = false;
-		if (inMessage2.data[i+18] != ithoMessage2MediumCommandBytes[i])  isMediumCommand = false;
-		if (inMessage2.data[i+18] != ithoMessage2LowCommandBytes[i])     isLowCommand = false;
-		if (inMessage2.data[i+18] != ithoMessage2StandByCommandBytes[i]) isStandByCommand = false;
-		if (inMessage2.data[i+18] != ithoMessage2Timer1CommandBytes[i])  isTimer1Command = false;
-		if (inMessage2.data[i+18] != ithoMessage2Timer2CommandBytes[i])  isTimer2Command = false;
-		if (inMessage2.data[i+18] != ithoMessage2Timer3CommandBytes[i])  isTimer3Command = false;
-		if (inMessage2.data[i+18] != ithoMessage2JoinCommandBytes[i])    isJoinCommand = false;
-		if (inMessage2.data[i+18] != ithoMessage2LeaveCommandBytes[i])   isLeaveCommand = false;
-	}
+  //packet type: RQ-Request, W-Write, I-Inform, RP-Response
+  if ((inIthoPacket.dataDecoded[0] >> 4) > 3) {
+    inIthoPacket.error = 1;
+    return false;
+  }
+  inIthoPacket.type = inIthoPacket.dataDecoded[0] >> 4;
 
-	//determine command
-	inIthoPacket.command = IthoUnknown;
-	if (isPowerCommand)   inIthoPacket.command = IthoFull;
-	if (isHighCommand)    inIthoPacket.command = IthoHigh;
-	if (isMediumCommand)  inIthoPacket.command = IthoMedium;
-	if (isLowCommand)     inIthoPacket.command = IthoLow;
-	if (isStandByCommand) inIthoPacket.command = IthoStandby;
-	if (isTimer1Command)  inIthoPacket.command = IthoTimer1;
-	if (isTimer2Command)  inIthoPacket.command = IthoTimer2;
-	if (isTimer3Command)  inIthoPacket.command = IthoTimer3;
-	if (isJoinCommand)    inIthoPacket.command = IthoJoin;
-	if (isLeaveCommand)   inIthoPacket.command = IthoLeave;
+  inIthoPacket.deviceId0 = 0;
+  inIthoPacket.deviceId1 = 0;
+  inIthoPacket.deviceId2 = 0;
+
+  //get DeviceID fields
+  uint8_t idfield = (inIthoPacket.dataDecoded[0] >> 2) & 0x03;
+
+  if (idfield == 0x00 || idfield == 0x02 || idfield == 0x03) {
+    inIthoPacket.deviceId0 = inIthoPacket.dataDecoded[dataPos] << 16 | inIthoPacket.dataDecoded[dataPos + 1] << 8 | inIthoPacket.dataDecoded[dataPos + 2];
+    dataPos += 3;
+    if (idfield == 0x00 || idfield == 0x03) {
+      inIthoPacket.deviceId1 = inIthoPacket.dataDecoded[dataPos] << 16 | inIthoPacket.dataDecoded[dataPos + 1] << 8 | inIthoPacket.dataDecoded[dataPos + 2];
+      dataPos += 3;
+    }
+    if (idfield == 0x00 || idfield == 0x02) {
+      inIthoPacket.deviceId2 = inIthoPacket.dataDecoded[dataPos] << 16 | inIthoPacket.dataDecoded[dataPos + 1] << 8 | inIthoPacket.dataDecoded[dataPos + 2];
+      dataPos += 3;
+    }
+  }
+  else {
+    inIthoPacket.deviceId2 = inIthoPacket.dataDecoded[dataPos] << 16 | inIthoPacket.dataDecoded[dataPos + 1] << 8 | inIthoPacket.dataDecoded[dataPos + 2];
+    dataPos += 3;
+  }
+
+  //determine param0 present
+  if (inIthoPacket.dataDecoded[0] & 0x02) {
+    inIthoPacket.param0 = inIthoPacket.dataDecoded[dataPos];
+
+    dataPos++;
+  }
+  else {
+    inIthoPacket.param0 = 0;
+  }
+  //determine param1 present
+  if (inIthoPacket.dataDecoded[0] & 0x01) {
+    inIthoPacket.param1 = inIthoPacket.dataDecoded[dataPos];
+    dataPos++;
+  }
+  else {
+    inIthoPacket.param1 = 0;
+  }
+
+  //Get the two bytes of the opcode
+  inIthoPacket.opcode = inIthoPacket.dataDecoded[dataPos] << 8 | inIthoPacket.dataDecoded[dataPos + 1];
+  dataPos += 2;
+
+  //Payload length
+  inIthoPacket.len = inIthoPacket.dataDecoded[dataPos];
+  if (inIthoPacket.len > MAX_PAYLOAD) {
+    inIthoPacket.error = 1;
+    return false;
+  }
+
+  dataPos++;
+  inIthoPacket.payloadPos = dataPos;
+
+
+  //Now we have parsed all the variable fields and know the total lenth of the message
+  //with that we can determine if the message CRC is correct
+  uint8_t mLen = inIthoPacket.payloadPos + inIthoPacket.len;
+
+  if (getCounter2(&inIthoPacket, mLen) != inIthoPacket.dataDecoded[mLen]) {
+    inIthoPacket.error = 2;
+#if defined (CRC_FILTER)
+    inIthoPacket.command = IthoUnknown;
+    return false;
+#endif
+  }
+
+  //
+  // old message parse code below
+  //
+
+  //deviceType of message type?
+  inIthoPacket.deviceType  = inIthoPacket.dataDecoded[0];
+
+  //deviceID
+  inIthoPacket.deviceId[0] = inIthoPacket.dataDecoded[1];
+  inIthoPacket.deviceId[1] = inIthoPacket.dataDecoded[2];
+  inIthoPacket.deviceId[2] = inIthoPacket.dataDecoded[3];
+
+  //counter1
+  inIthoPacket.counter = inIthoPacket.dataDecoded[4];
+
+  //handle command
+  switch (inIthoPacket.opcode) {
+    case IthoPacket::Type::BIND :
+      handleBind();
+      break;
+    case IthoPacket::Type::LEVEL :
+      handleLevel();
+      break;
+    case IthoPacket::Type::SETPOINT :
+      break;
+    case IthoPacket::Type::TIMER :
+      handleTimer();
+      break;
+    case IthoPacket::Type::STATUS :
+      handleStatus();
+      break;
+    case IthoPacket::Type::REMOTESTATUS :
+      handleRemotestatus();
+      break;
+    case IthoPacket::Type::TEMPHUM :
+      handleTemphum();
+      break;
+    case IthoPacket::Type::CO2 :
+      handleCo2();
+      break;
+    case IthoPacket::Type::BATTERY :
+      handleBattery();
+      break;
+  }
+
+
+  return true;
 }
+
+bool IthoCC1101::checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]) {
+  uint8_t offset = 0;
+  if (itho->deviceType == 28 || itho->deviceType == 24) offset = 2;
+  for (int i = 4; i < 6; i++)
+  {
+    //if (i == 2 || i == 3) continue; //skip byte3 and byte4, rft-rv and co2-auto remote device seem to sometimes have a different number there
+    if ( (itho->dataDecoded[i + 5 + offset] != commandBytes[i]) && (itho->dataDecodedChk[i + 5 + offset] != commandBytes[i]) ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 
 void IthoCC1101::sendCommand(IthoCommand command)
 {
