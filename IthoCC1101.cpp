@@ -493,30 +493,30 @@ bool IthoCC1101::parseMessageCommand() {
   //handle command
   switch (inIthoPacket.opcode) {
     case IthoPacket::Type::BIND :
-      handleBind();
+      //handleBind();
       break;
     case IthoPacket::Type::LEVEL :
-      handleLevel();
+      //handleLevel();
       break;
     case IthoPacket::Type::SETPOINT :
       break;
     case IthoPacket::Type::TIMER :
-      handleTimer();
+      //handleTimer();
       break;
     case IthoPacket::Type::STATUS :
-      handleStatus();
+      //handleStatus();
       break;
     case IthoPacket::Type::REMOTESTATUS :
-      handleRemotestatus();
+      //handleRemotestatus();
       break;
     case IthoPacket::Type::TEMPHUM :
-      handleTemphum();
+      //handleTemphum();
       break;
     case IthoPacket::Type::CO2 :
-      handleCo2();
+      //handleCo2();
       break;
     case IthoPacket::Type::BATTERY :
-      handleBattery();
+      //handleBattery();
       break;
   }
 
