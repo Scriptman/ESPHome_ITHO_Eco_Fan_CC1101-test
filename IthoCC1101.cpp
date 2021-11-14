@@ -14,7 +14,7 @@ IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()
 	this->outIthoPacket.previous = IthoLow;
 	this->sendTries = sendTries;
 //	this->receiveState = ExpectNormalCommand;
-	//this->receiveState = ExpectMessageStart;
+	this->receiveState = ExpectMessageStart;
 
 ////fixed device id - duco remote with standby
 	//this->outIthoPacket.deviceId1[0] = 83;
