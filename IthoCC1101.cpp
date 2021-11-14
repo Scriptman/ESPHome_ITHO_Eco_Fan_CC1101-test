@@ -267,7 +267,7 @@ void IthoCC1101::initReceive()
 	writeCommand(CC1101_SRES);
 
 	writeRegister(CC1101_TEST0 ,0x09);
-	writeRegister(CC1101_FSCAL2 ,0x00);
+	writeRegister(CC1101_FSCAL2 ,0x00);  // was: 0x02
 
 	//0x6F,0x26,0x2E,0x7F,0x8A,0x84,0xCA,0xC4
 	writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, (uint8_t*)ithoPaTableReceive, 8);
@@ -336,7 +336,40 @@ void IthoCC1101::initReceive()
 	initReceiveMessage2(ithomsg_unknown);
 
 	// new
-	initReceiveMessage();
+	//initReceiveMessage();
+}
+
+void  IthoCC1101::initReceiveMessage2(IthoMessageType expectedMessageType)
+{
+	uint8_t marcState;
+
+	writeCommand(CC1101_SIDLE);	//idle
+
+	//set datarate
+	writeRegister(CC1101_MDMCFG4 ,0x9A); // set kBaud
+	writeRegister(CC1101_MDMCFG3 ,0x83); // set kBaud
+	writeRegister(CC1101_DEVIATN ,0x50);
+
+ 	//set fifo mode with fixed packet length and sync bytes
+	writeRegister(CC1101_PKTLEN ,42);			//42 bytes message (sync at beginning of message is removed by CC1101)
+	receiveState = ExpectNormalCommand;
+
+	//set fifo mode with fixed packet length and sync bytes
+	writeRegister(CC1101_PKTCTRL0 ,0x00);
+//	writeRegister(CC1101_SYNC1 ,170);			//message2 byte6
+	writeRegister(CC1101_SYNC1 ,172);			//message2 byte6
+	writeRegister(CC1101_SYNC0 ,171);			//message2 byte7
+	writeRegister(CC1101_MDMCFG2 ,0x02);
+	writeRegister(CC1101_PKTCTRL1 ,0x00);
+
+	writeCommand(CC1101_SRX); //switch to RX state
+
+	// Check that the RX state has been entered
+	while (((marcState = readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) & CC1101_BITS_MARCSTATE) != CC1101_MARCSTATE_RX)
+	{
+		if (marcState == CC1101_MARCSTATE_RXFIFO_OVERFLOW) // RX_OVERFLOW
+			writeCommand(CC1101_SFRX); //flush RX buffer
+	}
 }
 
 void  IthoCC1101::initReceiveMessage()
@@ -378,8 +411,10 @@ uint8_t IthoCC1101::receivePacket() {
 
 bool IthoCC1101::checkForNewPacket()
 {
-	if (parseMessageCommand()) {
-    initReceiveMessage();
+	if (receiveData(&inMessage2, 42))
+	{
+		parseMessageCommand();
+		initReceiveMessage2(ithomsg_unknown);
 		return true;
 	}
 
