@@ -113,11 +113,12 @@ class IthoCC1101 : protected CC1101
 		uint8_t ReadRSSI();
 		bool checkID(const uint8_t *id);
 		String getLastIDstr(bool ashex=true);
-		String getLastMessagestr(bool ashex=true);
+		String getLastMessage2str(bool ashex=true);
 
 		//new
 		uint8_t receivePacket();  //read RX fifo
 		String LastMessageDecoded();
+		String getLastMessagestr(bool ashex=true);
 
 		//send
 		void sendCommand(IthoCommand command);

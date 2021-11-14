@@ -1057,3 +1057,13 @@ String IthoCC1101::getLastMessage2str(bool ashex) {
     }
     return str;
 }
+
+String IthoCC1101::getLastMessagestr(bool ashex) {
+  String str = "Length=" + String(inMessage.length) + ".";
+  for (uint8_t i = 0; i < inMessage.length; i++) {
+    if (ashex) str += String(inMessage.data[i], HEX);
+    else str += String(inMessage.data[i]);
+    if (i < inMessage.length - 1) str += ":";
+  }
+  return str;
+}
