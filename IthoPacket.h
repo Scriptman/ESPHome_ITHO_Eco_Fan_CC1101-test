@@ -104,8 +104,6 @@ class IthoPacket
         BATTERY       = 0x1060
         };
 
-        IthoCommand command;
-
         int8_t state;
 
         //Message Fields
@@ -114,9 +112,9 @@ class IthoPacket
 
         uint8_t header;
         uint8_t type;
-        uint32_t deviceId0;
-        uint32_t deviceId1;
-        uint32_t deviceId2;
+        //uint32_t deviceId0;
+        //uint32_t deviceId1;
+        //uint32_t deviceId2;
         uint8_t param0;
         uint8_t param1;
         uint16_t opcode;
@@ -126,11 +124,6 @@ class IthoPacket
 
         uint8_t payloadPos;
         uint8_t payload[MAX_PAYLOAD];
-
-        // Todo: remove
-        IthoMessageType messageType;
-        IthoCommand previous;
-        // end todo
 
         uint8_t dataDecoded[MAX_DECODED];
         uint8_t dataDecodedChk[MAX_DECODED];
