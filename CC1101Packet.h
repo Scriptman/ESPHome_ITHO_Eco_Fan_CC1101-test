@@ -9,7 +9,7 @@
 
 #define CC1101_BUFFER_LEN        64
 #define CC1101_DATA_LEN          CC1101_BUFFER_LEN - 3
-#define MAX_RAW                  162
+#define MAX_RAW                  162 // was: 72
 
 
 class CC1101Packet

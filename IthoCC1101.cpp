@@ -301,8 +301,8 @@ void IthoCC1101::initReceive()
 	writeRegister(CC1101_AGCCTRL2 ,0x43);
 	writeRegister(CC1101_AGCCTRL1 ,0x40);
 	writeRegister(CC1101_AGCCTRL0 ,0x91);
-	writeRegister(CC1101_FSCAL3 ,0xA9);
-	writeRegister(CC1101_FSCAL2 ,0x2A);
+	writeRegister(CC1101_FSCAL3 ,0xA9);                    // For newer models 0xE9 (>2011))
+	writeRegister(CC1101_FSCAL2 ,0x00);                    // For newer models 0x2A (>2011))
 	writeRegister(CC1101_FSCAL1 ,0x00);
 	writeRegister(CC1101_FSCAL0 ,0x11);                    // For newer models 0x1F (> 2011))
 	writeRegister(CC1101_FSTEST ,0x59);
@@ -314,7 +314,7 @@ void IthoCC1101::initReceive()
 	writeRegister(CC1101_ADDR ,0x00);
 	writeRegister(CC1101_PKTLEN ,0xFF);
 	writeRegister(CC1101_TEST0 ,0x09);
-	writeRegister(CC1101_FSCAL2 ,0x00);                    // For newer models remove this line (> 2011))
+	//writeRegister(CC1101_FSCAL2 ,0x00);                    // For newer models remove this line (> 2011))
 
 	writeCommand(CC1101_SCAL);
 
@@ -333,7 +333,9 @@ void IthoCC1101::initReceive()
 
 	while ((readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) != CC1101_MARCSTATE_RX) yield();
 
-//	initReceiveMessage2(IthoUnknown);
+	initReceiveMessage2(ithomsg_unknown);
+
+	// new
 	initReceiveMessage();
 }
 
@@ -349,12 +351,13 @@ void  IthoCC1101::initReceiveMessage()
 	writeRegister(CC1101_DEVIATN ,0x50);
 
  	//set fifo mode with fixed packet length and sync bytes
-	//writeRegister(CC1101_PKTLEN ,42);			//42 bytes message (sync at beginning of message is removed by CC1101)
-	//receiveState = ExpectNormalCommand;
+	writeRegister(CC1101_PKTLEN ,42);			//42 bytes message (sync at beginning of message is removed by CC1101)
+	receiveState = ExpectNormalCommand;
 
 	//set fifo mode with fixed packet length and sync bytes
-	writeRegister(CC1101_PKTCTRL0 ,0x02);
-	writeRegister(CC1101_SYNC1 ,170);			//message2 byte6
+	writeRegister(CC1101_PKTCTRL0 ,0x00); // was: 0x02
+	//writeRegister(CC1101_SYNC1 ,170);			//message2 byte6
+	writeRegister(CC1101_SYNC1, 172);
 	writeRegister(CC1101_SYNC0 ,171);			//message2 byte7
 	writeRegister(CC1101_MDMCFG2 ,0x02);
 	writeRegister(CC1101_PKTCTRL1 ,0x00);
