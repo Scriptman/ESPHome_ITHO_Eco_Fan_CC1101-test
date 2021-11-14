@@ -147,7 +147,7 @@ class IthoCC1101 : protected CC1101
 		//parse received message
 		void parseReceivedPackets();
 		void parseMessageStart();
-		void parseMessageCommand();
+		//void parseMessageCommand();
 		void parseMessageJoin();
 		void parseMessageLeave();
 
