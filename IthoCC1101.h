@@ -147,12 +147,12 @@ class IthoCC1101 : protected CC1101
 		//parse received message
 		void parseReceivedPackets();
 		void parseMessageStart();
-		//void parseMessageCommand();
+		void parseMessageCommand();
 		void parseMessageJoin();
 		void parseMessageLeave();
 
 		//parse received message (new)
-		bool parseMessageCommand();
+		//bool parseMessageCommand();
 		bool checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]);
 
 		//send
